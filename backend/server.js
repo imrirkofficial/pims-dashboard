@@ -7,13 +7,22 @@ require('dotenv').config();
 const Account = require('./models/Account');
 
 const app = express();
-app.use(cors());
+
+// ==========================================
+// 🛡️ CORS CONFIGURATION (খুবই জরুরি)
+// ==========================================
+app.use(cors({
+    origin: "*", // সব জায়গা থেকে এক্সেস এলাউ করার জন্য এটি সবচেয়ে সহজ উপায়
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
 
 // 🔴 Secret Keys & Master Password
 const JWT_SECRET = process.env.JWT_SECRET || "pims_super_secret_jwt_key_2024";
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "pims_aes_encryption_key_secure";
-const ADMIN_PASS = "123"; // আপনার মাস্টার পাসওয়ার্ড একদম ফিক্সড করে দিলাম
+const ADMIN_PASS = "123"; 
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("Database Connected Successfully!"))
@@ -30,7 +39,7 @@ const decryptPass = (encryptedPassword) => {
     try {
         const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_KEY);
         const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-        return decrypted || encryptedPassword; // যদি প্লেইন টেক্সট হয়, তবে সেটাই রিটার্ন করবে
+        return decrypted || encryptedPassword; 
     } catch (err) {
         return encryptedPassword;
     }
@@ -54,7 +63,7 @@ const verifyToken = (req, res, next) => {
 // 🚀 API ROUTES
 // ==========================================
 
-// ১. LOGIN API (পাসওয়ার্ড চেক করে টোকেন দেবে)
+// ১. LOGIN API
 app.post('/api/login', (req, res) => {
     const { password } = req.body;
     if (password === ADMIN_PASS) {
@@ -65,7 +74,7 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// ২. GET API (ডেটাবেস থেকে এনে ডিক্রিপ্ট করে পাঠাবে)
+// ২. GET API
 app.get('/api/accounts', verifyToken, async (req, res) => {
     try {
         const accounts = await Account.find();
@@ -79,7 +88,7 @@ app.get('/api/accounts', verifyToken, async (req, res) => {
     }
 });
 
-// ৩. POST API (নতুন ডেটা সেভ করার আগে এনক্রিপ্ট করবে)
+// ৩. POST API
 app.post('/api/accounts', verifyToken, async (req, res) => {
     try {
         const encryptedData = { ...req.body, password: encryptPass(req.body.password) };
@@ -91,7 +100,7 @@ app.post('/api/accounts', verifyToken, async (req, res) => {
     }
 });
 
-// ৪. PUT API (এডিট করার সময় এনক্রিপ্ট করবে)
+// ৪. PUT API
 app.put('/api/accounts/:id', verifyToken, async (req, res) => {
     try {
         const updateData = { ...req.body };
